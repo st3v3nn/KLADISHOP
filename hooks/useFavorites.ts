@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
 import { useFirebaseAuth } from './useFirebaseAuth';
-import { useFirestore } from './useFirestore';
+import { doc, collection, addDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
+import { db } from '../src/firebase';
 
 export const useFavorites = () => {
   const { user } = useFirebaseAuth();
-  const { subscribeToAll, create, remove } = useFirestore();
   const [favorites, setFavorites] = useState<string[]>([]); // Product IDs
   const [loading, setLoading] = useState(true);
 
-  // Load favorites from Firestore when user changes
+  // Load and subscribe to favorites from Firestore
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -17,15 +17,21 @@ export const useFavorites = () => {
     }
 
     setLoading(true);
-    // Subscribe to user's favorites collection
-    const unsubscribe = subscribeToAll(`favorites/${user.id}`, (favs: any[]) => {
-      const productIds = favs.map(fav => fav.productId);
-      setFavorites(productIds);
-      setLoading(false);
-    });
+    try {
+      // Subscribe to user's favorites collection
+      const favoritesRef = collection(db, `favorites/${user.id}/items`);
+      const unsubscribe = onSnapshot(favoritesRef, (snapshot) => {
+        const productIds = snapshot.docs.map(doc => doc.data().productId);
+        setFavorites(productIds);
+        setLoading(false);
+      });
 
-    return () => unsubscribe();
-  }, [user, subscribeToAll]);
+      return () => unsubscribe();
+    } catch (err) {
+      console.error('Error subscribing to favorites:', err);
+      setLoading(false);
+    }
+  }, [user]);
 
   const toggleFavorite = async (productId: string) => {
     if (!user) return;
@@ -34,12 +40,18 @@ export const useFavorites = () => {
     
     try {
       if (isFavorited) {
-        // Remove from favorites
-        await remove(`favorites/${user.id}`, productId);
+        // Find and delete the favorite
+        const favoritesRef = collection(db, `favorites/${user.id}/items`);
+        const snapshot = await getDocs(favoritesRef);
+        const favDoc = snapshot.docs.find(doc => doc.data().productId === productId);
+        if (favDoc) {
+          await deleteDoc(doc(db, `favorites/${user.id}/items`, favDoc.id));
+        }
         setFavorites(favs => favs.filter(id => id !== productId));
       } else {
-        // Add to favorites
-        await create(`favorites/${user.id}`, {
+        // Add new favorite
+        const favoritesRef = collection(db, `favorites/${user.id}/items`);
+        await addDoc(favoritesRef, {
           productId,
           addedAt: new Date().toISOString()
         });
