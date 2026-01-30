@@ -1,0 +1,17 @@
+/* Minimal stylesheet to prevent 404 and hold custom styles.
+   Tailwind CDN is used via index.html for development; for production
+   install Tailwind as a PostCSS plugin as recommended in the console.
+*/
+
+/* Basic page reset */
+* { box-sizing: border-box; }
+html, body, #root { height: 100%; }
+body { margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+
+/* App-specific helpers (fallbacks if Tailwind not loaded) */
+.container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+.hidden { display: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+/* Small utility used across the app */
+.neo-shadow { box-shadow: 6px 6px 0 rgba(0,0,0,1); }

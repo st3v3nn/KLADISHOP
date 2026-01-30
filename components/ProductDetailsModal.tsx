@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { X, ShoppingBag, Heart, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { Button } from './Button';
 import { Product } from '../types';
-import { StyleAdvice } from './StyleAdvice';
 
 interface ProductDetailsModalProps {
   product: Product;
@@ -120,8 +119,7 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
             </button>
           </div>
 
-          {/* AI Guru Moved Here */}
-          <StyleAdvice product={product} />
+          {/* AI Guru removed */}
         </div>
       </div>
     </div>

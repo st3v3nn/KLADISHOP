@@ -1,11 +1,9 @@
 
 import React, { useState } from 'react';
-import { GoogleGenAI } from "@google/genai";
 import { Sparkles, Loader2, Send } from 'lucide-react';
 import { Button } from './Button';
 import { Product } from '../types';
 
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 interface StyleAdviceProps {
   product: Product | null;
@@ -19,15 +17,18 @@ export const StyleAdvice: React.FC<StyleAdviceProps> = ({ product }) => {
     if (!product) return;
     setLoading(true);
     try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `Act as a Gen Z Kenyan fashion stylist. Give a short, punchy, and trendy 2-sentence advice on how to style this thrifted item: "${product.name}" (${product.category}). Use some Kenyan slang like "luku", "piga luku", or "drip".`,
-        config: {
-            systemInstruction: "You are a cool Nairobi fashion icon. Keep it brief, high-energy, and modern.",
-            temperature: 0.8
-        }
+      // Call the server-side proxy for AI (recommended). Implement /api/style-advice
+      const res = await fetch('/api/style-advice', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: product.name,
+          category: product.category
+        })
       });
-      setAdvice(response.text || "Couldn't get the vibes right now, fam. Try again!");
+      if (!res.ok) throw new Error('AI server error');
+      const data = await res.json();
+      setAdvice(data.advice || "Couldn't get the vibes right now, fam. Try again!");
     } catch (error) {
       setAdvice("System's down. Too much drip?");
     } finally {
