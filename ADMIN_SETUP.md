@@ -24,20 +24,31 @@ The app now uses **Firebase Custom Claims** instead of hardcoded passwords for s
    ```
 7. Click **Update**
 
-#### **Option B: Using Firebase CLI**
+#### **Option B: Using Firebase Admin SDK Script**
+For setting custom claims via CLI, you'll need to use a Node.js script with the Admin SDK:
+
 ```bash
-# Install Firebase CLI globally if you haven't already
-npm install -g firebase-tools
+# Install Firebase Admin SDK
+npm install firebase-admin
 
-# Login to Firebase (opens browser)
-firebase login
+# Create a script (set-admin.js)
+const admin = require('firebase-admin');
+const serviceAccount = require('./serviceAccountKey.json');
 
-# Set the custom claim (replace YOUR_UID with user's UID from Console)
-firebase auth:import --accounts-file=/dev/stdin --project kladishop-7ad46
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
 
-# Easier: Use this command to set directly
-firebase projects:list  # to see your project
+const uid = 'user@example.com'; // Replace with user's UID from Firebase Console
+admin.auth().setCustomUserClaims(uid, { admin: true })
+  .then(() => console.log(`✓ ${uid} is now an admin`))
+  .catch(err => console.error('Error:', err));
+
+# Run the script
+node set-admin.js
 ```
+
+**Note:** You need to download `serviceAccountKey.json` from Firebase Console → Project Settings → Service Accounts
 
 #### **Option C: Cloud Function (For Production)**
 Deploy this Callable Cloud Function to set claims programmatically:
@@ -189,9 +200,12 @@ Before going live:
 ## ❓ Troubleshooting
 
 ### "Access Denied" message when clicking Admin
-- Custom claims not set yet, follow Step 2 above
-- Try logging out and logging back in to refresh the token
-- Check Firebase Console to confirm claim is saved
+**Solution:**
+1. Custom claims not set yet - follow **Step 2 Option A** (Firebase Console is fastest)
+2. Try logging out and logging back in to refresh the token
+3. Check Firebase Console → Authentication → Users → verify claim is set: `{ "admin": true }`
+
+**Debug tip:** Open browser DevTools → Network → look for auth request → check token includes admin claim
 
 ### Images not uploading
 - Check Firebase Storage bucket is enabled in Console
