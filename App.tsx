@@ -6,6 +6,8 @@ import { ProductGrid } from './components/ProductGrid';
 import { CheckoutModal } from './components/CheckoutModal';
 import { AdminDashboard } from './components/AdminDashboard';
 import ErrorBoundary from './components/ErrorBoundary';
+import { db } from './src/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { AuthModal } from './components/AuthModal';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { CartDrawer } from './components/CartDrawer';
@@ -48,6 +50,27 @@ const App: React.FC = () => {
       unsubOrders?.();
     };
   }, []);
+
+  // Firestore write helpers used by AdminDashboard to update collections
+  const setProducts = async (updatedProducts: Product[]) => {
+    try {
+      for (const p of updatedProducts) {
+        await setDoc(doc(db, 'products', p.id), p);
+      }
+    } catch (err) {
+      console.error('Failed to update products in Firestore:', err);
+    }
+  };
+
+  const setOrders = async (updatedOrders: Order[]) => {
+    try {
+      for (const o of updatedOrders) {
+        await setDoc(doc(db, 'orders', o.id), o);
+      }
+    } catch (err) {
+      console.error('Failed to update orders in Firestore:', err);
+    }
+  };
 
   // Logic Handlers
   const handleAddToCart = (product: Product) => {
