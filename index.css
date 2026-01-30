@@ -15,3 +15,13 @@ body { margin: 0; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: 
 
 /* Small utility used across the app */
 .neo-shadow { box-shadow: 6px 6px 0 rgba(0,0,0,1); }
+
+/* Mobile / touch improvements */
+img { max-width: 100%; height: auto; display: block; }
+button, a.button, .btn { min-height: 48px; min-width: 48px; touch-action: manipulation; }
+input, textarea, select { font-size: 16px; }
+/* Reduce tap highlight on Android */
+button, a, input, textarea { -webkit-tap-highlight-color: rgba(0,0,0,0); }
+
+/* Prevent horizontal overflow on small devices */
+html, body { overflow-x: hidden; }
