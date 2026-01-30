@@ -25,7 +25,7 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
 }) => {
   const [filter, setFilter] = useState('ALL');
 
-  const categories = ['ALL', 'TOPS', 'BOTTOMS', 'OUTERWEAR', 'KNITWEAR'];
+  const categories = ['ALL', 'TOPS', 'BOTTOMS', 'OUTERWEAR', 'KNITWEAR', 'ACCESSORIES'];
   
   const filteredProducts = products.filter(p => {
     const matchesCategory = filter === 'ALL' || p.category.toUpperCase() === filter;
@@ -83,11 +83,17 @@ export const ProductGrid: React.FC<ProductGridProps> = ({
               )}
 
               <div className="aspect-[3/4] overflow-hidden border-4 border-black mb-4 relative bg-gray-100 cursor-pointer" onClick={() => onViewDetails(product)}>
-                <img 
-                  src={product.image} 
-                  alt={product.name} 
-                  className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
-                />
+                {product.image ? (
+                  <img 
+                    src={product.image} 
+                    alt={product.name} 
+                    className="w-full h-full object-cover transition-all duration-500 group-hover:scale-105"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-center p-4 bg-white">
+                    <div className="font-black text-sm text-gray-500 uppercase">No image provided<br />Add your own in the dashboard</div>
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
                   <div className="bg-[#A3FF00] p-4 border-4 border-black neo-shadow-sm font-black italic">VIEW DETAILS</div>
                 </div>

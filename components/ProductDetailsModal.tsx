@@ -20,8 +20,14 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
 
   if (!isOpen) return null;
 
-  const nextImage = () => setActiveImage((prev) => (prev + 1) % product.gallery.length);
-  const prevImage = () => setActiveImage((prev) => (prev - 1 + product.gallery.length) % product.gallery.length);
+  const nextImage = () => {
+    if (!product.gallery || product.gallery.length === 0) return;
+    setActiveImage((prev) => (prev + 1) % product.gallery.length);
+  };
+  const prevImage = () => {
+    if (!product.gallery || product.gallery.length === 0) return;
+    setActiveImage((prev) => (prev - 1 + product.gallery.length) % product.gallery.length);
+  };
 
   return (
     <div className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md overflow-y-auto">
@@ -38,11 +44,17 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
         {/* Left: Gallery */}
         <div className="w-full md:w-1/2 border-b-4 md:border-b-0 md:border-r-4 border-black bg-gray-100 relative">
           <div className="aspect-[4/5] overflow-hidden">
-            <img 
-              src={product.gallery[activeImage]} 
-              alt={product.name} 
-              className="w-full h-full object-cover transition-all duration-500"
-            />
+            {product.gallery && product.gallery.length > 0 ? (
+              <img 
+                src={product.gallery[activeImage]} 
+                alt={product.name} 
+                className="w-full h-full object-cover transition-all duration-500"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center p-6 bg-white">
+                <div className="font-black text-center text-gray-500">No images available<br/>Add images via the admin panel</div>
+              </div>
+            )}
           </div>
           
           {/* Gallery Navigation */}
@@ -64,17 +76,19 @@ export const ProductDetailsModal: React.FC<ProductDetailsModalProps> = ({
           )}
 
           {/* Thumbnails */}
-          <div className="flex gap-2 p-4 overflow-x-auto bg-white/50 border-t-4 border-black">
-            {product.gallery.map((img, i) => (
-              <button 
-                key={i}
-                onClick={() => setActiveImage(i)}
-                className={`w-16 h-16 border-4 shrink-0 transition-all ${activeImage === i ? 'border-[#FF007F] scale-105' : 'border-black opacity-50'}`}
-              >
-                <img src={img} className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
+          {product.gallery && product.gallery.length > 0 && (
+            <div className="flex gap-2 p-4 overflow-x-auto bg-white/50 border-t-4 border-black">
+              {product.gallery.map((img, i) => (
+                <button 
+                  key={i}
+                  onClick={() => setActiveImage(i)}
+                  className={`w-16 h-16 border-4 shrink-0 transition-all ${activeImage === i ? 'border-[#FF007F] scale-105' : 'border-black opacity-50'}`}
+                >
+                  <img src={img} className="w-full h-full object-cover" />
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right: Info */}

@@ -6,6 +6,9 @@ import {
 } from 'lucide-react';
 import { Button } from './Button';
 import { Product, Order, OrderStatus } from '../types';
+import { db } from '../src/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { INITIAL_PRODUCTS } from '../constants';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -116,9 +119,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="bg-white text-black border-4 border-black p-6 neo-shadow-lg">
             <div className="flex justify-between items-center mb-8">
               <h2 className="text-3xl font-black italic uppercase">Inventory</h2>
-              <Button onClick={() => setShowAddModal(true)} variant="primary">
-                <Plus size={20} /> ADD NEW DROP
-              </Button>
+              <div className="flex gap-2">
+                <Button onClick={() => setShowAddModal(true)} variant="primary">
+                  <Plus size={20} /> ADD NEW DROP
+                </Button>
+                <Button onClick={async () => {
+                  if (!confirm('This will overwrite products in Firestore with initial product set. Continue?')) return;
+                  try {
+                    for (const p of INITIAL_PRODUCTS) {
+                      await setDoc(doc(db, 'products', p.id), p);
+                    }
+                    alert('Initial products synced to Firestore.');
+                    window.location.reload();
+                  } catch (err) {
+                    console.error(err);
+                    alert('Failed to sync products. Check console.');
+                  }
+                }} variant="accent">
+                  SYNC INITIAL PRODUCTS
+                </Button>
+              </div>
             </div>
             
             <div className="overflow-x-auto">
@@ -230,6 +250,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <option>Bottoms</option>
                       <option>Outerwear</option>
                       <option>Knitwear</option>
+                      <option>Accessories</option>
                     </select>
                   </div>
                   <div className="col-span-2">
