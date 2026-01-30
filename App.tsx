@@ -11,12 +11,16 @@ import { CartDrawer } from './components/CartDrawer';
 import { ProductDetailsModal } from './components/ProductDetailsModal';
 import { Product, Order, User } from './types';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS } from './constants';
+import { useFirebaseAuth } from './hooks/useFirebaseAuth';
+import { useFirestore } from './hooks/useFirestore';
 
 const App: React.FC = () => {
-  // Global Store States
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_ORDERS);
-  const [user, setUser] = useState<User | null>(null);
+  // Firebase hooks
+  const { user, loading: authLoading, logout } = useFirebaseAuth();
+  const { data: products, subscribeToAll: subscribeToProducts } = useFirestore<Product>('products');
+  const { data: orders, create: createOrder, subscribeToAll: subscribeToOrders } = useFirestore<Order>('orders');
+  
+  // Local UI States
   const [favorites, setFavorites] = useState<string[]>([]);
   const [cart, setCart] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -33,6 +37,16 @@ const App: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
+
+  // Subscribe to Firestore real-time updates on mount
+  useEffect(() => {
+    const unsubProducts = subscribeToProducts();
+    const unsubOrders = subscribeToOrders();
+    return () => {
+      unsubProducts?.();
+      unsubOrders?.();
+    };
+  }, []);
 
   // Logic Handlers
   const handleAddToCart = (product: Product) => {
@@ -54,24 +68,28 @@ const App: React.FC = () => {
     );
   };
 
-  const handleCheckoutSuccess = (name: string, phone: string) => {
-    const newOrder: Order = {
-      id: `ORD-${Date.now().toString().slice(-4)}`,
-      customerName: name,
-      phone: phone,
-      items: cart.map(item => ({ productId: item.id, name: item.name, price: item.price })),
-      amount: cart.reduce((sum, item) => sum + item.price, 0),
-      status: 'Pending',
-      date: new Date().toISOString().split('T')[0]
-    };
-    
-    setOrders([newOrder, ...orders]);
-    setCart([]);
-    setIsCheckoutOpen(false);
+  const handleCheckoutSuccess = async (name: string, phone: string) => {
+    if (!user) return;
+    try {
+      await createOrder({
+        id: `ORD-${Date.now().toString().slice(-4)}`,
+        customerName: name,
+        phone: phone,
+        items: cart.map(item => ({ productId: item.id, name: item.name, price: item.price })),
+        amount: cart.reduce((sum, item) => sum + item.price, 0),
+        status: 'Pending',
+        date: new Date().toISOString().split('T')[0],
+        userId: user.id
+      } as any);
+      setCart([]);
+      setIsCheckoutOpen(false);
+    } catch (error) {
+      console.error('Failed to create order:', error);
+    }
   };
 
-  const handleLogout = () => {
-    setUser(null);
+  const handleLogout = async () => {
+    await logout();
     setCart([]);
     setFavorites([]);
   };
@@ -109,7 +127,7 @@ const App: React.FC = () => {
             <a href="#shop" onClick={() => { setMobileMenuOpen(false); setShowFavoritesOnly(false); }}>New Drops</a>
             <button onClick={() => { setMobileMenuOpen(false); setShowFavoritesOnly(true); }}>Favorites</button>
             <a href="#" onClick={() => setMobileMenuOpen(false)}>About Us</a>
-            {user ? (
+            {user && !authLoading ? (
                <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>Log Out</button>
             ) : (
                <button onClick={() => { setIsAuthModalOpen(true); setMobileMenuOpen(false); }}>Sign In</button>
@@ -160,7 +178,7 @@ const App: React.FC = () => {
           </button>
 
           <div className="hidden lg:flex items-center gap-2 ml-2">
-            {user ? (
+            {user && !authLoading ? (
               <button onClick={handleLogout} className="flex items-center gap-2 font-black uppercase text-xs hover:text-[#FF007F] border-b-2 border-transparent hover:border-black transition-all">
                 <UserIcon size={20} /> LOGOUT ({user.name})
               </button>
@@ -283,7 +301,7 @@ const App: React.FC = () => {
       <AuthModal 
         isOpen={isAuthModalOpen} 
         onClose={() => setIsAuthModalOpen(false)} 
-        onAuth={setUser} 
+        onAuth={() => setIsAuthModalOpen(false)} 
       />
 
       <AdminAuthModal 
