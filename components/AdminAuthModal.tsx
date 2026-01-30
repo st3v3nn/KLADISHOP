@@ -10,21 +10,21 @@ interface AdminAuthModalProps {
 }
 
 export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
-  const [pin, setPin] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(false);
 
   if (!isOpen) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (pin === '2540') { // Security Pin for Kenyan Store
+    if (password === '!SicDr1p') {
       onSuccess();
       onClose();
-      setPin('');
+      setPassword('');
       setError(false);
     } else {
       setError(true);
-      setPin('');
+      setPassword('');
     }
   };
 
@@ -45,18 +45,18 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({ isOpen, onClose,
             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
             <input 
               type="password"
-              maxLength={4}
-              value={pin}
+              maxLength={16}
+              value={password}
               onChange={(e) => {
-                setPin(e.target.value);
+                setPassword(e.target.value);
                 setError(false);
               }}
-              placeholder="••••"
-              className={`w-full border-4 border-black p-4 pl-12 text-2xl tracking-[1em] text-center font-black focus:outline-none ${error ? 'bg-red-50' : 'bg-gray-50'}`}
+              placeholder="Enter admin password"
+              className={`w-full border-4 border-black p-4 pl-12 text-base text-center font-black focus:outline-none ${error ? 'bg-red-50' : 'bg-gray-50'}`}
               autoFocus
             />
           </div>
-          {error && <p className="text-red-500 font-black text-xs uppercase animate-bounce">WRONG PIN. ACCESS DENIED.</p>}
+          {error && <p className="text-red-500 font-black text-xs uppercase animate-bounce">WRONG PASSWORD. ACCESS DENIED.</p>}
           <Button type="submit" fullWidth variant="primary" size="lg">VERIFY IDENTITY</Button>
         </form>
       </div>
