@@ -1,8 +1,9 @@
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, User as UserIcon } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import { User } from '../types';
+import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -15,18 +16,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuth })
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const { login, register } = useFirebaseAuth();
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate auth
-    onAuth({
-      id: Math.random().toString(36).substr(2, 9),
-      email,
-      name: isLogin ? email.split('@')[0] : name
-    });
-    onClose();
+    setError(null);
+    setLoading(true);
+
+    try {
+      if (isLogin) {
+        await login(email, password);
+      } else {
+        await register(email, password, name);
+      }
+      // Callback will be handled by App.tsx through auth state change
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -73,10 +86,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuth })
             />
           </div>
 
-          <Button type="submit" fullWidth variant="primary" size="lg" className="mt-4 uppercase italic">
-            {isLogin ? 'Log In' : 'Sign Up'}
+          <Button type="submit" fullWidth variant="primary" size="lg" className="mt-4 uppercase italic" disabled={loading}>
+            {loading ? <Loader2 size={18} className="animate-spin" /> : null}
+            {loading ? 'Please wait...' : (isLogin ? 'Log In' : 'Sign Up')}
           </Button>
         </form>
+
+        {error && (
+          <div className="mt-4 p-3 bg-red-100 border-2 border-red-500 rounded text-sm font-bold text-red-800">
+            {error}
+          </div>
+        )}
 
         <button 
           onClick={() => setIsLogin(!isLogin)} 

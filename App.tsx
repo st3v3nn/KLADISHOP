@@ -275,7 +275,7 @@ const App: React.FC = () => {
         
         <div className="max-w-7xl mx-auto pt-8 border-t-4 border-black flex flex-col md:flex-row justify-between items-center gap-4 text-xs font-black uppercase">
           <p>© 2024 KLADI SHOP. BUILT FOR THE STREETS.</p>
-          <p className="flex items-center gap-2">POWERED BY <span className="bg-[#A3FF00] px-2 py-0.5 border-2 border-black">M-PESA</span></p>
+          <p className="flex items-center gap-2">POWERED BY <span className="bg-[#A3FF00] px-2 py-0.5 border-2 border-black">BBS</span></p>
         </div>
       </footer>
 
