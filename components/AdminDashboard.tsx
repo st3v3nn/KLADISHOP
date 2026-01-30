@@ -2,13 +2,14 @@
 import React, { useState } from 'react';
 import { 
   Plus, Edit2, Trash2, Package, TrendingUp, Users, 
-  ArrowLeft, CheckCircle, Clock, Truck, ShieldCheck, X 
+  ArrowLeft, CheckCircle, Clock, Truck, ShieldCheck, X, Upload, Loader 
 } from 'lucide-react';
 import { Button } from './Button';
 import { Product, Order, OrderStatus } from '../types';
 import { db } from '../src/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { INITIAL_PRODUCTS } from '../constants';
+import { useFirebaseStorage } from '../hooks/useFirebaseStorage';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -24,6 +25,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders'>('overview');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
+  const { uploadImage, uploading } = useFirebaseStorage();
+  const [uploadingMainImage, setUploadingMainImage] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Stats Calculations
   const totalRevenue = orders.reduce((sum, order) => sum + order.amount, 0);
@@ -68,6 +72,51 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
     setEditingProduct(null);
     setShowAddModal(false);
+  };
+
+  const handleMainImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setUploadingMainImage(true);
+    setUploadError(null);
+    try {
+      const url = await uploadImage(file, 'products/main');
+      // Update the form input value
+      const imageInput = document.querySelector('input[name="image"]') as HTMLInputElement;
+      if (imageInput) {
+        imageInput.value = url;
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploadingMainImage(false);
+    }
+  };
+
+  const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    setUploadingMainImage(true);
+    setUploadError(null);
+    try {
+      const galleryInput = document.querySelector('input[name="gallery"]') as HTMLInputElement;
+      const existingGallery = galleryInput?.value ? galleryInput.value.split(',').map(u => u.trim()) : [];
+      
+      for (const file of Array.from(files)) {
+        const url = await uploadImage(file, 'products/gallery');
+        existingGallery.push(url);
+      }
+      
+      if (galleryInput) {
+        galleryInput.value = existingGallery.join(', ');
+      }
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploadingMainImage(false);
+    }
   };
 
   const updateOrderStatus = (orderId: string, newStatus: OrderStatus) => {
@@ -233,6 +282,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div className="bg-white text-black border-4 border-black w-full max-w-lg p-8 neo-shadow-lg relative overflow-y-auto max-h-[90vh]">
              <button onClick={() => {setShowAddModal(false); setEditingProduct(null)}} className="absolute top-4 right-4"><X size={24}/></button>
              <h3 className="text-3xl font-black italic uppercase mb-6">{editingProduct ? 'Edit Drop' : 'New Drop'}</h3>
+             
+             {uploadError && (
+               <div className="bg-red-100 border-2 border-red-500 text-red-700 p-3 mb-4 font-bold text-sm">
+                 {uploadError}
+               </div>
+             )}
+             
              <form onSubmit={handleSaveProduct} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
@@ -253,21 +309,40 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <option>Accessories</option>
                     </select>
                   </div>
+
+                  {/* Main Image Upload */}
                   <div className="col-span-2">
-                    <label className="block text-xs font-black mb-1">IMAGE URL</label>
-                    <input name="image" defaultValue={editingProduct?.image} className="w-full border-4 border-black p-2 font-bold" />
+                    <label className="block text-xs font-black mb-1">MAIN IMAGE</label>
+                    <div className="flex gap-2 mb-2">
+                      <input name="image" defaultValue={editingProduct?.image} className="flex-1 border-4 border-black p-2 font-bold" placeholder="Image URL or upload below" />
+                      <label className="flex items-center gap-1 px-3 py-2 border-4 border-black bg-[#A3FF00] text-black font-black cursor-pointer hover:neo-shadow-sm transition-all">
+                        <Upload size={16} />
+                        {uploadingMainImage ? <Loader size={16} className="animate-spin" /> : 'UPLOAD'}
+                        <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMainImage} className="hidden" />
+                      </label>
+                    </div>
                   </div>
-                  {/* Added missing fields in the form */}
+
+                  {/* Gallery Upload */}
                   <div className="col-span-2">
-                    <label className="block text-xs font-black mb-1">GALLERY URLS (COMMA SEPARATED)</label>
-                    <input name="gallery" defaultValue={editingProduct?.gallery?.join(', ')} className="w-full border-4 border-black p-2 font-bold" placeholder="url1, url2, url3" />
+                    <label className="block text-xs font-black mb-1">GALLERY IMAGES</label>
+                    <div className="flex gap-2 mb-2">
+                      <input name="gallery" defaultValue={editingProduct?.gallery?.join(', ')} className="flex-1 border-4 border-black p-2 font-bold" placeholder="URLs separated by commas" />
+                      <label className="flex items-center gap-1 px-3 py-2 border-4 border-black bg-[#7B2CBF] text-white font-black cursor-pointer hover:neo-shadow-sm transition-all">
+                        <Upload size={16} />
+                        {uploading ? <Loader size={16} className="animate-spin" /> : 'ADD'}
+                        <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploading} className="hidden" />
+                      </label>
+                    </div>
+                    <p className="text-xs text-gray-600 font-bold">Upload multiple images or paste URLs separated by commas</p>
                   </div>
+
                   <div className="col-span-2">
                     <label className="block text-xs font-black mb-1">DESCRIPTION</label>
                     <textarea name="description" defaultValue={editingProduct?.description} className="w-full border-4 border-black p-2 font-bold h-24" required />
                   </div>
                 </div>
-                <Button type="submit" fullWidth variant="primary" className="mt-4">
+                <Button type="submit" fullWidth variant="primary" className="mt-4" disabled={uploadingMainImage || uploading}>
                   SAVE PRODUCT
                 </Button>
              </form>

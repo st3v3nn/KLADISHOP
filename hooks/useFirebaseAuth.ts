@@ -13,6 +13,7 @@ import { User } from '../types';
 
 export const useFirebaseAuth = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -23,17 +24,21 @@ export const useFirebaseAuth = () => {
     );
   }, []);
 
-  // Listen for auth state changes
+  // Listen for auth state changes and check admin claims
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser: FirebaseUser | null) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
         setUser({
           id: firebaseUser.uid,
           email: firebaseUser.email || '',
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
         });
+        // Get custom claims to check admin status
+        const claims = await firebaseUser.getIdTokenResult();
+        setIsAdmin(claims.claims?.admin === true);
       } else {
         setUser(null);
+        setIsAdmin(false);
       }
       setLoading(false);
     });
@@ -89,6 +94,7 @@ export const useFirebaseAuth = () => {
 
   return {
     user,
+    isAdmin,
     loading,
     error,
     register,

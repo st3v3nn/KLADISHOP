@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, Heart, Search, Menu, X, Instagram, Twitter, MessageSquare, Check, LayoutDashboard, LogIn, User as UserIcon } from 'lucide-react';
+import { ShoppingCart, Heart, Search, Menu, X, Instagram, Twitter, MessageSquare, Check, LayoutDashboard, LogIn, User as UserIcon, History } from 'lucide-react';
 import { Hero } from './components/Hero';
 import { ProductGrid } from './components/ProductGrid';
 import { CheckoutModal } from './components/CheckoutModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import { OrderHistory } from './components/OrderHistory';
 import ErrorBoundary from './components/ErrorBoundary';
 import { db } from './src/firebase';
 import { doc, setDoc } from 'firebase/firestore';
@@ -16,15 +17,16 @@ import { Product, Order, User } from './types';
 import { INITIAL_PRODUCTS, INITIAL_ORDERS } from './constants';
 import { useFirebaseAuth } from './hooks/useFirebaseAuth';
 import { useFirestore } from './hooks/useFirestore';
+import { useFavorites } from './hooks/useFavorites';
 
 const App: React.FC = () => {
   // Firebase hooks
   const { user, loading: authLoading, logout } = useFirebaseAuth();
+  const { favorites, toggleFavorite } = useFavorites();
   const { data: products, subscribeToAll: subscribeToProducts } = useFirestore<Product>('products');
   const { data: orders, create: createOrder, subscribeToAll: subscribeToOrders } = useFirestore<Order>('orders');
   
   // Local UI States
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [cart, setCart] = useState<Product[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -36,6 +38,7 @@ const App: React.FC = () => {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const [isOrderHistoryOpen, setIsOrderHistoryOpen] = useState(false);
   const [selectedDetailsProduct, setSelectedDetailsProduct] = useState<Product | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [newsletterEmail, setNewsletterEmail] = useState('');
@@ -87,9 +90,7 @@ const App: React.FC = () => {
       setIsAuthModalOpen(true);
       return;
     }
-    setFavorites(prev => 
-      prev.includes(id) ? prev.filter(fid => fid !== id) : [...prev, id]
-    );
+    toggleFavorite(id);
   };
 
   const handleCheckoutSuccess = async (name: string, phone: string) => {
@@ -151,6 +152,9 @@ const App: React.FC = () => {
           <div className="flex-1 flex flex-col justify-center items-center gap-8 text-5xl font-black italic text-white uppercase tracking-tighter">
             <a href="#shop" onClick={() => { setMobileMenuOpen(false); setShowFavoritesOnly(false); }}>New Drops</a>
             <button onClick={() => { setMobileMenuOpen(false); setShowFavoritesOnly(true); }}>Favorites</button>
+            {user && !authLoading && (
+              <button onClick={() => { setIsOrderHistoryOpen(true); setMobileMenuOpen(false); }}>Orders</button>
+            )}
             <a href="#" onClick={() => setMobileMenuOpen(false)}>About Us</a>
             {user && !authLoading ? (
                <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }}>Log Out</button>
@@ -204,9 +208,14 @@ const App: React.FC = () => {
 
           <div className="hidden lg:flex items-center gap-2 ml-2">
             {user && !authLoading ? (
-              <button onClick={handleLogout} className="flex items-center gap-2 font-black uppercase text-xs hover:text-[#FF007F] border-b-2 border-transparent hover:border-black transition-all">
-                <UserIcon size={20} /> LOGOUT ({user.name})
-              </button>
+              <>
+                <button onClick={() => setIsOrderHistoryOpen(true)} className="flex items-center gap-2 font-black uppercase text-xs hover:text-[#7B2CBF] border-b-2 border-transparent hover:border-black transition-all">
+                  <History size={20} /> ORDERS
+                </button>
+                <button onClick={handleLogout} className="flex items-center gap-2 font-black uppercase text-xs hover:text-[#FF007F] border-b-2 border-transparent hover:border-black transition-all">
+                  <UserIcon size={20} /> LOGOUT ({user.name})
+                </button>
+              </>
             ) : (
               <button onClick={() => setIsAuthModalOpen(true)} className="flex items-center gap-2 font-black uppercase text-xs hover:text-[#A3FF00] bg-black text-white px-4 py-2 border-4 border-black neo-shadow-sm active:translate-x-1 active:translate-y-1">
                 <LogIn size={20} /> SIGN IN
@@ -351,6 +360,11 @@ const App: React.FC = () => {
         isOpen={isCheckoutOpen} 
         onClose={() => setIsCheckoutOpen(false)} 
         onSuccess={handleCheckoutSuccess}
+      />
+
+      <OrderHistory 
+        isOpen={isOrderHistoryOpen} 
+        onClose={() => setIsOrderHistoryOpen(false)} 
       />
 
       {selectedDetailsProduct && (
