@@ -5,6 +5,7 @@ import { Hero } from './components/Hero';
 import { ProductGrid } from './components/ProductGrid';
 import { CheckoutModal } from './components/CheckoutModal';
 import { AdminDashboard } from './components/AdminDashboard';
+import ErrorBoundary from './components/ErrorBoundary';
 import { AuthModal } from './components/AuthModal';
 import { AdminAuthModal } from './components/AdminAuthModal';
 import { CartDrawer } from './components/CartDrawer';
@@ -116,6 +117,7 @@ const App: React.FC = () => {
   }
 
   return (
+    <ErrorBoundary>
     <div className="min-h-screen relative bg-[#f0f0f0] selection:bg-[#A3FF00]">
       {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
@@ -339,6 +341,7 @@ const App: React.FC = () => {
         />
       )}
     </div>
+    </ErrorBoundary>
   );
 };
 
