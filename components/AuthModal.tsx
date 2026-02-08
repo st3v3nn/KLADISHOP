@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, User as UserIcon, Loader2 } from 'lucide-react';
 import { Button } from './Button';
 import { User } from '../types';
-import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { useAuth } from '../hooks/useAuth';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,7 +18,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuth })
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { login, register } = useFirebaseAuth();
+  const { login, register } = useAuth();
 
   if (!isOpen) return null;
 
@@ -55,34 +55,34 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuth })
         <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <div className="space-y-1">
-              <label className="text-xs font-black uppercase flex items-center gap-2"><UserIcon size={14}/> Name</label>
-              <input 
-                type="text" 
-                value={name} 
+              <label className="text-xs font-black uppercase flex items-center gap-2"><UserIcon size={14} /> Name</label>
+              <input
+                type="text"
+                value={name}
                 onChange={e => setName(e.target.value)}
-                className="w-full border-4 border-black p-3 focus:bg-[#A3FF00]/10 outline-none font-bold" 
-                required 
+                className="w-full border-4 border-black p-3 focus:bg-[#A3FF00]/10 outline-none font-bold"
+                required
               />
             </div>
           )}
           <div className="space-y-1">
-            <label className="text-xs font-black uppercase flex items-center gap-2"><Mail size={14}/> Email Address</label>
-            <input 
-              type="email" 
-              value={email} 
+            <label className="text-xs font-black uppercase flex items-center gap-2"><Mail size={14} /> Email Address</label>
+            <input
+              type="email"
+              value={email}
               onChange={e => setEmail(e.target.value)}
-              className="w-full border-4 border-black p-3 focus:bg-[#A3FF00]/10 outline-none font-bold" 
-              required 
+              className="w-full border-4 border-black p-3 focus:bg-[#A3FF00]/10 outline-none font-bold"
+              required
             />
           </div>
           <div className="space-y-1">
-            <label className="text-xs font-black uppercase flex items-center gap-2"><Lock size={14}/> Password</label>
-            <input 
-              type="password" 
-              value={password} 
+            <label className="text-xs font-black uppercase flex items-center gap-2"><Lock size={14} /> Password</label>
+            <input
+              type="password"
+              value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full border-4 border-black p-3 focus:bg-[#A3FF00]/10 outline-none font-bold" 
-              required 
+              className="w-full border-4 border-black p-3 focus:bg-[#A3FF00]/10 outline-none font-bold"
+              required
             />
           </div>
 
@@ -98,8 +98,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onAuth })
           </div>
         )}
 
-        <button 
-          onClick={() => setIsLogin(!isLogin)} 
+        <button
+          onClick={() => setIsLogin(!isLogin)}
           className="w-full mt-6 text-sm font-black uppercase hover:text-[#FF007F] transition-colors"
         >
           {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}

@@ -1,14 +1,12 @@
 import { useEffect, useState } from 'react';
-import { useFirebaseAuth } from './useFirebaseAuth';
-import { doc, collection, addDoc, deleteDoc, onSnapshot, getDocs } from 'firebase/firestore';
-import { db } from '../src/firebase';
+import { useAuth } from './useAuth';
+import { supabase } from '../src/supabase';
 
 export const useFavorites = () => {
-  const { user } = useFirebaseAuth();
+  const { user } = useAuth();
   const [favorites, setFavorites] = useState<string[]>([]); // Product IDs
   const [loading, setLoading] = useState(true);
 
-  // Load and subscribe to favorites from Firestore
   useEffect(() => {
     if (!user) {
       setFavorites([]);
@@ -17,44 +15,61 @@ export const useFavorites = () => {
     }
 
     setLoading(true);
-    try {
-      // Subscribe to user's favorites collection
-      const favoritesRef = collection(db, `favorites/${user.id}/items`);
-      const unsubscribe = onSnapshot(favoritesRef, (snapshot) => {
-        const productIds = snapshot.docs.map(doc => doc.data().productId);
-        setFavorites(productIds);
-        setLoading(false);
-      });
 
-      return () => unsubscribe();
-    } catch (err) {
-      console.error('Error subscribing to favorites:', err);
+    // Initial fetch
+    const fetchFavorites = async () => {
+      const { data } = await supabase
+        .from('favorites')
+        .select('product_id')
+        .eq('user_id', user.id);
+
+      if (data) {
+        setFavorites(data.map(f => f.product_id));
+      }
       setLoading(false);
-    }
+    };
+
+    fetchFavorites();
+
+    // Subscribe
+    const channel = supabase
+      .channel(`public:favorites:user_id=eq.${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'favorites', filter: `user_id=eq.${user.id}` },
+        (payload) => {
+          // Reload on change
+          fetchFavorites();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   const toggleFavorite = async (productId: string) => {
     if (!user) return;
 
     const isFavorited = favorites.includes(productId);
-    
+
     try {
       if (isFavorited) {
-        // Find and delete the favorite
-        const favoritesRef = collection(db, `favorites/${user.id}/items`);
-        const snapshot = await getDocs(favoritesRef);
-        const favDoc = snapshot.docs.find(doc => doc.data().productId === productId);
-        if (favDoc) {
-          await deleteDoc(doc(db, `favorites/${user.id}/items`, favDoc.id));
-        }
+        // Remove
+        await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('product_id', productId);
+
         setFavorites(favs => favs.filter(id => id !== productId));
       } else {
-        // Add new favorite
-        const favoritesRef = collection(db, `favorites/${user.id}/items`);
-        await addDoc(favoritesRef, {
-          productId,
-          addedAt: new Date().toISOString()
-        });
+        // Add
+        await supabase
+          .from('favorites')
+          .insert({ user_id: user.id, product_id: productId });
+
         setFavorites(favs => [...favs, productId]);
       }
     } catch (err) {

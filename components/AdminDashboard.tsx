@@ -1,8 +1,8 @@
 
 import React, { useState } from 'react';
-import { 
-  Plus, Edit2, Trash2, Package, TrendingUp, Users, 
-  ArrowLeft, CheckCircle, Clock, Truck, ShieldCheck, X, Upload, Loader 
+import {
+  Plus, Edit2, Trash2, Package, TrendingUp, Users,
+  ArrowLeft, CheckCircle, Clock, Truck, ShieldCheck, X, Upload, Loader
 } from 'lucide-react';
 import { Button } from './Button';
 import { Product, Order, OrderStatus } from '../types';
@@ -19,13 +19,13 @@ interface AdminDashboardProps {
   onUpdateOrders: (orders: Order[]) => void;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
-  products, orders, onExit, onUpdateProducts, onUpdateOrders 
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+  products, orders, onExit, onUpdateProducts, onUpdateOrders
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders'>('overview');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const { uploadImage, uploading } = useFirebaseStorage();
+  const { uploadImage, uploading, uploadProgress } = useFirebaseStorage();
   const [uploadingMainImage, setUploadingMainImage] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -47,9 +47,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const formData = new FormData(e.currentTarget);
     const mainImage = formData.get('image') as string || 'https://picsum.photos/seed/new/600/800';
     const galleryStr = formData.get('gallery') as string;
-    
+
     // Parse comma-separated gallery URLs or fallback to main image
-    const gallery = galleryStr 
+    const gallery = galleryStr
       ? galleryStr.split(',').map(url => url.trim()).filter(url => url !== '')
       : (editingProduct?.gallery || [mainImage]);
 
@@ -80,15 +80,23 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     setUploadingMainImage(true);
     setUploadError(null);
+
+    // Reset file input
+    e.target.value = '';
+
     try {
+      console.log('Starting main image upload:', file.name);
       const url = await uploadImage(file, 'products/main');
+      console.log('Main image uploaded successfully:', url);
+
       // Update the form input value
       const imageInput = document.querySelector('input[name="image"]') as HTMLInputElement;
       if (imageInput) {
         imageInput.value = url;
       }
     } catch (err: any) {
-      setUploadError(err.message || 'Upload failed');
+      console.error('Main image upload error:', err);
+      setUploadError(err.message || 'Image upload failed. Please try again.');
     } finally {
       setUploadingMainImage(false);
     }
@@ -96,24 +104,36 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
   const handleGalleryUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (!files) return;
+    if (!files || files.length === 0) return;
 
     setUploadingMainImage(true);
     setUploadError(null);
+
+    // Reset file input
+    e.target.value = '';
+
     try {
       const galleryInput = document.querySelector('input[name="gallery"]') as HTMLInputElement;
       const existingGallery = galleryInput?.value ? galleryInput.value.split(',').map(u => u.trim()) : [];
-      
-      for (const file of Array.from(files)) {
-        const url = await uploadImage(file, 'products/gallery');
-        existingGallery.push(url);
+
+      for (const file of Array.from(files) as File[]) {
+        try {
+          console.log('Uploading gallery image:', file.name);
+          const url = await uploadImage(file, 'products/gallery');
+          console.log('Gallery image uploaded:', url);
+          existingGallery.push(url);
+        } catch (err: any) {
+          console.error('Gallery image upload failed:', err);
+          setUploadError(`Failed to upload ${file.name}: ${err.message}`);
+        }
       }
-      
+
       if (galleryInput) {
         galleryInput.value = existingGallery.join(', ');
       }
     } catch (err: any) {
-      setUploadError(err.message || 'Upload failed');
+      console.error('Gallery upload error:', err);
+      setUploadError(err.message || 'Gallery upload failed. Please try again.');
     } finally {
       setUploadingMainImage(false);
     }
@@ -132,28 +152,31 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             COMMAND<span className="text-white">CENTER</span>
           </h1>
           <p className="font-bold text-gray-400">ADMIN MODE: Logged in as Head Curator</p>
+          {/* Debug Info */}
+          <div className="text-xs mt-2 font-mono">
+            ADMIN CLAIM: <span className={uploading ? 'text-yellow-500' : 'text-[#A3FF00]'}>DETECTED</span>
+          </div>
         </div>
         <Button variant="danger" onClick={onExit} size="sm">
           <ArrowLeft size={18} /> EXIT DASHBOARD
         </Button>
-      </div>
+      </div >
 
       {/* Tabs */}
-      <div className="max-w-7xl mx-auto flex gap-4 mb-8 overflow-x-auto pb-2">
+      < div className="max-w-7xl mx-auto flex gap-4 mb-8 overflow-x-auto pb-2" >
         {(['overview', 'products', 'orders'] as const).map(tab => (
-          <button 
+          <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`px-6 py-3 font-black uppercase italic border-4 transition-all ${
-              activeTab === tab 
-              ? 'bg-[#FF007F] border-black translate-x-1 translate-y-1' 
+            className={`px-6 py-3 font-black uppercase italic border-4 transition-all ${activeTab === tab
+              ? 'bg-[#FF007F] border-black translate-x-1 translate-y-1'
               : 'bg-white text-black border-black neo-shadow-sm hover:translate-x-1 hover:translate-y-1 hover:neo-shadow-none'
-            }`}
+              }`}
           >
             {tab}
           </button>
         ))}
-      </div>
+      </div >
 
       <div className="max-w-7xl mx-auto">
         {activeTab === 'overview' && (
@@ -189,7 +212,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </Button>
               </div>
             </div>
-            
+
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
@@ -230,9 +253,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
                     <span className="bg-black text-white px-3 py-1 text-xs font-black">{order.id}</span>
-                    <span className={`text-xs font-black uppercase px-2 py-1 border-2 border-black ${
-                      order.status === 'Delivered' ? 'bg-[#A3FF00]' : 'bg-yellow-300'
-                    }`}>
+                    <span className={`text-xs font-black uppercase px-2 py-1 border-2 border-black ${order.status === 'Delivered' ? 'bg-[#A3FF00]' : 'bg-yellow-300'
+                      }`}>
                       {order.status}
                     </span>
                   </div>
@@ -240,26 +262,25 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <p className="font-bold text-gray-500 mb-2">{order.phone} • {order.date}</p>
                   <div className="space-y-1 border-t-2 border-black pt-2">
                     {order.items?.map((item, i) => (
-                       <p key={i} className="text-sm font-bold flex justify-between">
-                         <span>- {item.name}</span>
-                         <span>KES {item.price.toLocaleString()}</span>
-                       </p>
+                      <p key={i} className="text-sm font-bold flex justify-between">
+                        <span>- {item.name}</span>
+                        <span>KES {item.price.toLocaleString()}</span>
+                      </p>
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="flex flex-col items-end gap-4">
                   <div className="text-right">
                     <p className="text-3xl font-black italic">KES {order.amount.toLocaleString()}</p>
                   </div>
                   <div className="flex border-4 border-black bg-gray-100">
                     {(['Pending', 'Processing', 'Shipped', 'Delivered'] as OrderStatus[]).map(status => (
-                      <button 
+                      <button
                         key={status}
                         onClick={() => updateOrderStatus(order.id, status)}
-                        className={`p-3 border-r-2 last:border-0 border-black transition-colors ${
-                          order.status === status ? 'bg-black text-white' : 'hover:bg-[#FF007F] hover:text-white'
-                        }`}
+                        className={`p-3 border-r-2 last:border-0 border-black transition-colors ${order.status === status ? 'bg-black text-white' : 'hover:bg-[#FF007F] hover:text-white'
+                          }`}
                         title={status}
                       >
                         {status === 'Pending' && <Clock size={20} />}
@@ -277,19 +298,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       </div>
 
       {/* Product Modal Code */}
-      {(showAddModal || editingProduct) && (
-        <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4">
-          <div className="bg-white text-black border-4 border-black w-full max-w-lg p-8 neo-shadow-lg relative overflow-y-auto max-h-[90vh]">
-             <button onClick={() => {setShowAddModal(false); setEditingProduct(null)}} className="absolute top-4 right-4"><X size={24}/></button>
-             <h3 className="text-3xl font-black italic uppercase mb-6">{editingProduct ? 'Edit Drop' : 'New Drop'}</h3>
-             
-             {uploadError && (
-               <div className="bg-red-100 border-2 border-red-500 text-red-700 p-3 mb-4 font-bold text-sm">
-                 {uploadError}
-               </div>
-             )}
-             
-             <form onSubmit={handleSaveProduct} className="space-y-4">
+      {
+        (showAddModal || editingProduct) && (
+          <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4">
+            <div className="bg-white text-black border-4 border-black w-full max-w-lg p-8 neo-shadow-lg relative overflow-y-auto max-h-[90vh]">
+              <button onClick={() => { setShowAddModal(false); setEditingProduct(null) }} className="absolute top-4 right-4"><X size={24} /></button>
+              <h3 className="text-3xl font-black italic uppercase mb-6">{editingProduct ? 'Edit Drop' : 'New Drop'}</h3>
+
+              {uploadError && (
+                <div className="bg-red-100 border-2 border-red-500 text-red-700 p-3 mb-4 font-bold text-sm">
+                  {uploadError}
+                </div>
+              )}
+
+              <form onSubmit={handleSaveProduct} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
                     <label className="block text-xs font-black mb-1">PRODUCT NAME</label>
@@ -317,8 +339,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <input name="image" defaultValue={editingProduct?.image} className="flex-1 border-4 border-black p-2 font-bold" placeholder="Image URL or upload below" />
                       <label className="flex items-center gap-1 px-3 py-2 border-4 border-black bg-[#A3FF00] text-black font-black cursor-pointer hover:neo-shadow-sm transition-all">
                         <Upload size={16} />
-                        {uploadingMainImage ? <Loader size={16} className="animate-spin" /> : 'UPLOAD'}
-                        <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMainImage} className="hidden" />
+                        {uploadingMainImage ? (
+                          <>
+                            <Loader size={16} className="animate-spin" /> {uploadProgress !== null ? `${uploadProgress}%` : 'UPLOADING'}
+                          </>
+                        ) : 'UPLOAD'}
+                        <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMainImage || uploading} className="hidden" />
                       </label>
                     </div>
                   </div>
@@ -330,8 +356,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <input name="gallery" defaultValue={editingProduct?.gallery?.join(', ')} className="flex-1 border-4 border-black p-2 font-bold" placeholder="URLs separated by commas" />
                       <label className="flex items-center gap-1 px-3 py-2 border-4 border-black bg-[#7B2CBF] text-white font-black cursor-pointer hover:neo-shadow-sm transition-all">
                         <Upload size={16} />
-                        {uploading ? <Loader size={16} className="animate-spin" /> : 'ADD'}
-                        <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploading} className="hidden" />
+                        {uploadingMainImage ? (
+                          <>
+                            <Loader size={16} className="animate-spin" /> {uploadProgress !== null ? `${uploadProgress}%` : 'UPLOADING'}
+                          </>
+                        ) : 'ADD'}
+                        <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploadingMainImage || uploading} className="hidden" />
                       </label>
                     </div>
                     <p className="text-xs text-gray-600 font-bold">Upload multiple images or paste URLs separated by commas</p>
@@ -345,11 +375,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 <Button type="submit" fullWidth variant="primary" className="mt-4" disabled={uploadingMainImage || uploading}>
                   SAVE PRODUCT
                 </Button>
-             </form>
+              </form>
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )
+      }
+    </div >
   );
 };
 

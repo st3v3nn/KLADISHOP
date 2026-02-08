@@ -1,4 +1,4 @@
-export { useFirebaseAuth } from './useFirebaseAuth';
-export { useFirestore } from './useFirestore';
-export { useFirebaseStorage } from './useFirebaseStorage';
+export { useAuth } from './useAuth';
+export { useDatabase } from './useDatabase';
+export { useStorage } from './useStorage';
 export { useFavorites } from './useFavorites';

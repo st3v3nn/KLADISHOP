@@ -6,7 +6,7 @@
     A Gen-Z Thrift Hub • Neo-Brutalist E-Commerce Platform
   </p>
   <p>
-    <strong>React 19</strong> • <strong>TypeScript</strong> • <strong>Vite</strong> • <strong>Firebase</strong> • <strong>Tailwind CSS</strong>
+    <strong>React 19</strong> • <strong>TypeScript</strong> • <strong>Vite</strong> • <strong>Supabase</strong> • <strong>Tailwind CSS</strong>
   </p>
 </div>
 
@@ -21,7 +21,7 @@
 - ❤️ **Persistent Favorites** - Save items to your wishlist (survives sessions)
 - 📦 **Order Management** - Track order status from pending to delivered
 - 📸 **Image Upload** - Admins can upload product photos with auto-resizing
-- 🔐 **Secure Authentication** - Firebase Auth with custom admin claims
+- 🔐 **Secure Authentication** - Supabase Auth (Email/Password)
 - 📱 **Mobile Optimized** - Fully responsive design for Android & iOS
 
 ---
@@ -31,7 +31,7 @@
 ### Prerequisites
 - Node.js 18+
 - npm 9+ or yarn
-- Firebase account (free tier works)
+- Supabase project
 
 ### Installation
 
@@ -46,38 +46,36 @@ npm run dev
 # Opens at http://localhost:3001
 ```
 
-### Set Up Firebase
+### Set Up Supabase
 
-1. Create a Firebase project at https://console.firebase.google.com
-2. Enable Authentication (Email/Password)
-3. Create Firestore Database (start in test mode)
-4. Create Storage Bucket
-5. Update `src/firebase.ts` with your config
-6. Deploy security rules: `firebase deploy --only firestore:rules`
+1. Create a project at https://supabase.com
+2. Copy `.env.example` to `.env.local` and add your URL/Anon Key.
+3. Run the schema from `supabase/schema.sql` in the SQL Editor.
+4. Run storage policies from `supabase/storage_policies.sql`.
 
 ### Deploy Admin Access
 
 1. Create an admin account at http://localhost:3001/sign-in
-2. Go to Firebase Console → Authentication → Users
+2. Go to Supabase Dashboard → Authentication → Users
 3. Find your admin email
-4. Click "Custom claims" and add: `{ "admin": true }`
+4. Update the `profiles` table for this user, setting `is_admin` to `true`.
 5. Refresh the app and click "Admin Dashboard"
 
 ---
 
 ## ✨ Key Features
 
-### 1. 🔐 Secure Admin Authentication
-- **Custom Claims**: Uses Firebase custom claims instead of hardcoded passwords
-- **No Password Manager Needed**: Admin access tied to user's Firebase account
-- **Setup**: 5-minute process in Firebase Console
+### 1. 👮 Admin Panel Access
+- **Role Based**: Uses `profiles` table with `is_admin` boolean.
+- **Secure**: RLS policies enforce admin-only write access.
+- **Setup**: Quick update in Supabase Dashboard.
 
 **How it works:**
 ```
-User logs in → Token fetched → Claim checked (admin: true) → Dashboard unlocked
+User logs in → Session fetched → Profile checked (is_admin: true) → Dashboard unlocked
 ```
 
-### 2. 📸 Firebase Storage Image Upload
+### 2. 📸 Supabase Storage Image Upload
 - **Automatic Resize**: Images auto-compress to 1200px width @ 85% quality
 - **Batch Upload**: Upload multiple gallery images at once
 - **Optimized URLs**: CDN-served download links for fast loading
@@ -86,10 +84,10 @@ User logs in → Token fetched → Claim checked (admin: true) → Dashboard unl
 **Upload path**: Admin Dashboard → Products → Click "UPLOAD"
 
 ### 3. ❤️ Persistent Favorites
-- **Firestore Storage**: Favorites saved in `/favorites/{userId}/items`
+- **Supabase Storage**: Favorites saved in `favorites` table, linked by `user_id`
 - **Real-Time Sync**: Changes sync across all devices
 - **Session Survival**: Favorites persist even after logout
-- **Secure**: Users can only see/modify their own favorites
+- **Secure**: Users can only see/modify their own favorites via RLS
 
 **Access**: Click heart icon on product, or view "Favorites" button in nav
 
@@ -109,12 +107,12 @@ User logs in → Token fetched → Claim checked (admin: true) → Dashboard unl
 ```
 kladi-shop/
 ├── src/
-│   ├── firebase.ts              # Firebase initialization
-│   └── types.ts                 # TypeScript types
+│   ├── supabase.ts              # Supabase client initialization
+│   ├── types.ts                 # TypeScript types
 ├── hooks/
-│   ├── useFirebaseAuth.ts       # Auth with custom claims
-│   ├── useFirestore.ts          # Firestore CRUD
-│   ├── useFirebaseStorage.ts    # Image upload/resize
+│   ├── useAuth.ts               # Auth with user profiles
+│   ├── useDatabase.ts           # Supabase CRUD operations
+│   ├── useStorage.ts            # Image upload/resize
 │   └── useFavorites.ts          # Favorites management
 ├── components/
 │   ├── AdminDashboard.tsx       # Product/order management

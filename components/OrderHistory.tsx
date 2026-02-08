@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Package, Clock, Truck, CheckCircle, AlertCircle } from 'lucide-react';
 import { Order } from '../types';
 import { Button } from './Button';
-import { useFirestore } from '../hooks/useFirestore';
-import { useFirebaseAuth } from '../hooks/useFirebaseAuth';
+import { useDatabase } from '../hooks/useDatabase';
+import { useAuth } from '../hooks/useAuth';
 
 interface OrderHistoryProps {
   isOpen: boolean;
@@ -11,14 +11,24 @@ interface OrderHistoryProps {
 }
 
 export const OrderHistory: React.FC<OrderHistoryProps> = ({ isOpen, onClose }) => {
-  const { user } = useFirebaseAuth();
-  const { data: allOrders, subscribeToAll } = useFirestore<Order>('orders');
+  const { user } = useAuth();
+  const { data: allOrders } = useDatabase<Order>('orders');
   const [userOrders, setUserOrders] = useState<Order[]>([]);
 
   // Filter orders for current user
   useEffect(() => {
     if (user && allOrders) {
-      const filtered = allOrders.filter(order => order.userId === user.id);
+      // Supabase returns snake_case or we defined table as snake_case but Types might be mixed.
+      // Schema: user_id. Types: userId (from Order interface?)
+      // We should check if mapping is needed. 
+      // Current implementation of 'useDatabase' returns types as T directly from 'select *'.
+      // If table has 'user_id' but interface expects 'userId', we have a mismatch.
+
+      // Let's assume for now we use 'user_id' in the filter if that's what comes back, or we map it.
+      // But 'useDatabase' returns T[].
+      // For now, let's filter by checking both keys if possible or just use the one we inserted.
+      // In App.tsx we inserted 'user_id'. 
+      const filtered = allOrders.filter(order => (order as any).user_id === user.id || (order as any).userId === user.id);
       setUserOrders(filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
     }
   }, [user, allOrders]);
@@ -58,8 +68,8 @@ export const OrderHistory: React.FC<OrderHistoryProps> = ({ isOpen, onClose }) =
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white border-4 border-black w-full max-w-2xl p-8 neo-shadow-lg relative my-8">
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="absolute top-4 left-4 text-black hover:text-[#FF007F] transition-colors"
         >
           <ArrowLeft size={24} />

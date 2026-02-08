@@ -9,6 +9,7 @@ export interface Product {
   description: string; // Added description
   tag?: string;
   stock?: number;
+  created_at?: string; // Database timestamp
 }
 
 export interface User {
