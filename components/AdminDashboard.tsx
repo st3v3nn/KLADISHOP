@@ -6,10 +6,9 @@ import {
 } from 'lucide-react';
 import { Button } from './Button';
 import { Product, Order, OrderStatus } from '../types';
-import { db } from '../src/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { supabase } from '../src/supabase';
 import { INITIAL_PRODUCTS } from '../constants';
-import { useFirebaseStorage } from '../hooks/useFirebaseStorage';
+import { useStorage } from '../hooks/useStorage';
 
 interface AdminDashboardProps {
   products: Product[];
@@ -25,8 +24,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders'>('overview');
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
-  const { uploadImage, uploading, uploadProgress } = useFirebaseStorage();
-  const [uploadingMainImage, setUploadingMainImage] = useState(false);
+  const { uploadImage, uploading, uploadProgress } = useStorage();
   const [uploadError, setUploadError] = useState<string | null>(null);
 
   // Stats Calculations
@@ -41,7 +39,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
-  // Fixed the type error by including missing gallery and description fields
   const handleSaveProduct = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
@@ -78,7 +75,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingMainImage(true);
     setUploadError(null);
 
     // Reset file input
@@ -86,7 +82,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
 
     try {
       console.log('Starting main image upload:', file.name);
-      const url = await uploadImage(file, 'products/main');
+      const url = await uploadImage(file, 'products', 'main');
       console.log('Main image uploaded successfully:', url);
 
       // Update the form input value
@@ -97,8 +93,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } catch (err: any) {
       console.error('Main image upload error:', err);
       setUploadError(err.message || 'Image upload failed. Please try again.');
-    } finally {
-      setUploadingMainImage(false);
     }
   };
 
@@ -106,7 +100,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    setUploadingMainImage(true);
     setUploadError(null);
 
     // Reset file input
@@ -119,7 +112,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
       for (const file of Array.from(files) as File[]) {
         try {
           console.log('Uploading gallery image:', file.name);
-          const url = await uploadImage(file, 'products/gallery');
+          const url = await uploadImage(file, 'products', 'gallery');
           console.log('Gallery image uploaded:', url);
           existingGallery.push(url);
         } catch (err: any) {
@@ -134,8 +127,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     } catch (err: any) {
       console.error('Gallery upload error:', err);
       setUploadError(err.message || 'Gallery upload failed. Please try again.');
-    } finally {
-      setUploadingMainImage(false);
     }
   };
 
@@ -152,7 +143,6 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             COMMAND<span className="text-white">CENTER</span>
           </h1>
           <p className="font-bold text-gray-400">ADMIN MODE: Logged in as Head Curator</p>
-          {/* Debug Info */}
           <div className="text-xs mt-2 font-mono">
             ADMIN CLAIM: <span className={uploading ? 'text-yellow-500' : 'text-[#A3FF00]'}>DETECTED</span>
           </div>
@@ -160,10 +150,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         <Button variant="danger" onClick={onExit} size="sm">
           <ArrowLeft size={18} /> EXIT DASHBOARD
         </Button>
-      </div >
+      </div>
 
       {/* Tabs */}
-      < div className="max-w-7xl mx-auto flex gap-4 mb-8 overflow-x-auto pb-2" >
+      <div className="max-w-7xl mx-auto flex gap-4 mb-8 overflow-x-auto pb-2">
         {(['overview', 'products', 'orders'] as const).map(tab => (
           <button
             key={tab}
@@ -176,7 +166,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             {tab}
           </button>
         ))}
-      </div >
+      </div>
 
       <div className="max-w-7xl mx-auto">
         {activeTab === 'overview' && (
@@ -196,12 +186,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <Plus size={20} /> ADD NEW DROP
                 </Button>
                 <Button onClick={async () => {
-                  if (!confirm('This will overwrite products in Firestore with initial product set. Continue?')) return;
+                  if (!confirm('This will overwrite products in Supabase with initial product set. Continue?')) return;
                   try {
-                    for (const p of INITIAL_PRODUCTS) {
-                      await setDoc(doc(db, 'products', p.id), p);
-                    }
-                    alert('Initial products synced to Firestore.');
+                    const { error } = await supabase.from('products').upsert(INITIAL_PRODUCTS);
+                    if (error) throw error;
+                    alert('Initial products synced to Supabase.');
                     window.location.reload();
                   } catch (err) {
                     console.error(err);
@@ -297,12 +286,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
         )}
       </div>
 
-      {/* Product Modal Code */}
+      {/* Product Modal */}
       {
         (showAddModal || editingProduct) && (
           <div className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4">
             <div className="bg-white text-black border-4 border-black w-full max-w-lg p-8 neo-shadow-lg relative overflow-y-auto max-h-[90vh]">
-              <button onClick={() => { setShowAddModal(false); setEditingProduct(null) }} className="absolute top-4 right-4"><X size={24} /></button>
+              <button onClick={() => { setShowAddModal(false); setEditingProduct(null); setUploadError(null); }} className="absolute top-4 right-4"><X size={24} /></button>
               <h3 className="text-3xl font-black italic uppercase mb-6">{editingProduct ? 'Edit Drop' : 'New Drop'}</h3>
 
               {uploadError && (
@@ -322,6 +311,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <input name="price" type="number" defaultValue={editingProduct?.price} className="w-full border-4 border-black p-2 font-bold" required />
                   </div>
                   <div>
+                    <label className="block text-xs font-black mb-1">STOCK</label>
+                    <input name="stock" type="number" defaultValue={editingProduct?.stock || 1} className="w-full border-4 border-black p-2 font-bold" />
+                  </div>
+                  <div className="col-span-2">
                     <label className="block text-xs font-black mb-1">CATEGORY</label>
                     <select name="category" defaultValue={editingProduct?.category} className="w-full border-4 border-black p-2 font-bold">
                       <option>Tops</option>
@@ -331,6 +324,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <option>Accessories</option>
                     </select>
                   </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs font-black mb-1">TAG (OPTIONAL)</label>
+                    <input name="tag" defaultValue={editingProduct?.tag} className="w-full border-4 border-black p-2 font-bold" placeholder="e.g., NEW, RARE, HOT" />
+                  </div>
 
                   {/* Main Image Upload */}
                   <div className="col-span-2">
@@ -339,12 +336,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <input name="image" defaultValue={editingProduct?.image} className="flex-1 border-4 border-black p-2 font-bold" placeholder="Image URL or upload below" />
                       <label className="flex items-center gap-1 px-3 py-2 border-4 border-black bg-[#A3FF00] text-black font-black cursor-pointer hover:neo-shadow-sm transition-all">
                         <Upload size={16} />
-                        {uploadingMainImage ? (
+                        {uploading ? (
                           <>
                             <Loader size={16} className="animate-spin" /> {uploadProgress !== null ? `${uploadProgress}%` : 'UPLOADING'}
                           </>
                         ) : 'UPLOAD'}
-                        <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploadingMainImage || uploading} className="hidden" />
+                        <input type="file" accept="image/*" onChange={handleMainImageUpload} disabled={uploading} className="hidden" />
                       </label>
                     </div>
                   </div>
@@ -356,12 +353,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                       <input name="gallery" defaultValue={editingProduct?.gallery?.join(', ')} className="flex-1 border-4 border-black p-2 font-bold" placeholder="URLs separated by commas" />
                       <label className="flex items-center gap-1 px-3 py-2 border-4 border-black bg-[#7B2CBF] text-white font-black cursor-pointer hover:neo-shadow-sm transition-all">
                         <Upload size={16} />
-                        {uploadingMainImage ? (
+                        {uploading ? (
                           <>
                             <Loader size={16} className="animate-spin" /> {uploadProgress !== null ? `${uploadProgress}%` : 'UPLOADING'}
                           </>
                         ) : 'ADD'}
-                        <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploadingMainImage || uploading} className="hidden" />
+                        <input type="file" accept="image/*" multiple onChange={handleGalleryUpload} disabled={uploading} className="hidden" />
                       </label>
                     </div>
                     <p className="text-xs text-gray-600 font-bold">Upload multiple images or paste URLs separated by commas</p>
@@ -372,7 +369,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                     <textarea name="description" defaultValue={editingProduct?.description} className="w-full border-4 border-black p-2 font-bold h-24" required />
                   </div>
                 </div>
-                <Button type="submit" fullWidth variant="primary" className="mt-4" disabled={uploadingMainImage || uploading}>
+                <Button type="submit" fullWidth variant="primary" className="mt-4" disabled={uploading}>
                   SAVE PRODUCT
                 </Button>
               </form>
@@ -380,7 +377,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </div>
         )
       }
-    </div >
+    </div>
   );
 };
 

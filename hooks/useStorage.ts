@@ -3,6 +3,7 @@ import { supabase } from '../src/supabase';
 
 export const useStorage = () => {
     const [uploading, setUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     // Resize and compress image before upload
@@ -45,6 +46,7 @@ export const useStorage = () => {
 
     const uploadImage = async (file: File, bucket: string = 'products', folder: string = ''): Promise<string> => {
         setUploading(true);
+        setUploadProgress(0);
         setError(null);
 
         try {
@@ -53,6 +55,7 @@ export const useStorage = () => {
             let optimizedBlob: Blob | File = file;
 
             try {
+                setUploadProgress(25);
                 optimizedBlob = await optimizeImage(file);
                 console.log('Optimization success.');
             } catch (optErr) {
@@ -66,6 +69,8 @@ export const useStorage = () => {
 
             console.log(`Uploading to ${bucket}/${filePath} (Size: ${(optimizedBlob.size / 1024).toFixed(2)} KB)`);
 
+            setUploadProgress(50);
+
             const { error: uploadError } = await supabase.storage
                 .from(bucket)
                 .upload(filePath, optimizedBlob, {
@@ -78,10 +83,13 @@ export const useStorage = () => {
                 throw uploadError;
             }
 
+            setUploadProgress(75);
+
             const { data } = supabase.storage
                 .from(bucket)
                 .getPublicUrl(filePath);
 
+            setUploadProgress(100);
             return data.publicUrl;
         } catch (err: any) {
             console.error('Upload Error:', err);
@@ -89,12 +97,14 @@ export const useStorage = () => {
             throw err;
         } finally {
             setUploading(false);
+            setUploadProgress(null);
         }
     };
 
     return {
         uploadImage,
         uploading,
+        uploadProgress,
         error
     };
 };
