@@ -29,6 +29,9 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  // Skip caching for unsupported schemes (e.g., chrome-extension, data, etc.)
+  const url = new URL(event.request.url);
+  if (!['http:', 'https:'].includes(url.protocol)) return;
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;

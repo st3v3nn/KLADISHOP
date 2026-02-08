@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
       host: '0.0.0.0',
       hmr: {
         host: 'localhost',
+        protocol: 'ws',
       },
     },
     plugins: [react()],

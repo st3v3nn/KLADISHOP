@@ -9,19 +9,24 @@ export const useAuth = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
-        // Check active session
-        supabase.auth.getSession().then(({ data: { session } }) => {
-            if (session?.user) {
-                setUser({
-                    id: session.user.id,
-                    email: session.user.email || '',
-                    name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
-                });
-                checkAdmin(session.user.id);
-            } else {
+        // Check active session and ensure loading is cleared after admin check
+        (async () => {
+            try {
+                const { data: { session } } = await supabase.auth.getSession();
+                if (session?.user) {
+                    setUser({
+                        id: session.user.id,
+                        email: session.user.email || '',
+                        name: session.user.user_metadata.full_name || session.user.email?.split('@')[0] || 'User',
+                    });
+                    await checkAdmin(session.user.id);
+                }
+            } catch (err) {
+                console.warn('Error checking session:', err);
+            } finally {
                 setLoading(false);
             }
-        });
+        })();
 
         // Listen for auth changes
         const {
